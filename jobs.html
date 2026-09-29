@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>전체 공고 목록 — JobFit</title>
+  <meta name="description" content="실제 원천 서버에서 수집한 원격 구인 공고 전체 목록. 출처별로 필터링하고 제목으로 검색할 수 있습니다." />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="/index.html">
+        <span class="brand__mark" aria-hidden="true">🎯</span>
+        JobFit
+      </a>
+      <nav class="nav" aria-label="주요 메뉴">
+        <a href="/index.html">홈</a>
+        <a href="/recommend.html">AI 추천</a>
+        <a href="/jobs.html">공고 목록</a>
+        <a href="/about.html">서비스 소개</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+
+      <section class="hero" style="padding-bottom:18px;">
+        <h1>전체 공고 목록</h1>
+        <p class="hero__lead">
+          3개 원천 서버에서 수집한 공고입니다. 출처나 키워드로 걸러 보세요.
+          각 카드의 출처 배지를 눌러 원문 공고로 이동할 수 있습니다.
+        </p>
+      </section>
+
+      <!-- ===== 실패 처리: 서버 오류 안내 ===== -->
+      <div class="alert alert--error" id="jobs-alert" role="alert" hidden>
+        <span class="alert__icon" aria-hidden="true">!</span>
+        <span id="jobs-alert-text"></span>
+      </div>
+
+      <!-- ===== 필터 바 ===== -->
+      <section class="card" style="margin-bottom:22px;">
+        <div class="form-grid">
+          <div class="field field--full">
+            <label for="search">제목 · 회사 · 태그 검색</label>
+            <input type="search" id="search" placeholder="예: python, react, 데이터" autocomplete="off" />
+          </div>
+
+          <div class="field">
+            <label for="source-filter">출처</label>
+            <select id="source-filter">
+              <option value="">전체</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="sort">정렬</label>
+            <select id="sort">
+              <option value="recent">최신순</option>
+              <option value="salary">급여 높은순</option>
+              <option value="company">회사명순</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;">
+          <button type="button" class="btn btn--ghost btn--sm" id="refresh-btn">
+            최신으로 새로고침
+          </button>
+          <span class="field__hint" id="list-meta">불러오는 중…</span>
+        </div>
+      </section>
+
+      <!-- ===== 결과 그리드 ===== -->
+      <div class="grid" id="job-list"></div>
+
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__grid">
+      <span>JobFit · 구직 맞춤 AI 추천 서비스</span>
+      <span>
+        데이터:
+        <a href="https://remoteok.com" target="_blank" rel="noopener noreferrer">RemoteOK</a> ·
+        <a href="https://remotive.com" target="_blank" rel="noopener noreferrer">Remotive</a> ·
+        <a href="https://www.arbeitnow.com" target="_blank" rel="noopener noreferrer">Arbeitnow</a>
+      </span>
+    </div>
+  </footer>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/jobs.js"></script>
+</body>
+</html>
