@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JobFit — 내 조건에 맞는 원격 구직 공고 AI 추천</title>
+  <meta name="description" content="구직자의 상황과 조건을 입력하면 실제 원천 서버의 구인중인 공고에서 적합한 것을 AI가 골라 이유와 함께 추천합니다." />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="/index.html">
+        <span class="brand__mark" aria-hidden="true">🎯</span>
+        JobFit
+      </a>
+      <nav class="nav" aria-label="주요 메뉴">
+        <a href="/index.html">홈</a>
+        <a href="/recommend.html">AI 추천</a>
+        <a href="/jobs.html">공고 목록</a>
+        <a href="/about.html">서비스 소개</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+
+      <!-- ===== 섹션 1: 히어로 ===== -->
+      <section class="hero">
+        <span class="hero__eyebrow">실제 원천 서버의 공고 · AI 근거 설명</span>
+        <h1>내 조건에 맞는 원격 구직 공고를<br />AI가 골라 이유와 함께 알려드립니다</h1>
+        <p class="hero__lead">
+          공고 사이트를 한 곳씩 돌아다니며 걸러내는 시간을 줄이는 것이 목표입니다.
+          직무·기술스택·경력·희망 금여를 입력하면, 실제로 올라와 있는 원격 공고 중
+          조건에 맞는 것만 골라 <strong>왜 추천하는지</strong>까지 설명해 드립니다.
+        </p>
+        <p style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;">
+          <a class="btn" href="/recommend.html">추천 받으러 가기</a>
+          <a class="btn btn--ghost" href="/jobs.html">공고 먼저 둘러보기</a>
+        </p>
+      </section>
+
+      <!-- ===== 섹션 2: 문제와 해결 ===== -->
+      <section class="section">
+        <div class="section__head">
+          <h2>무엇이 다른가</h2>
+          <p class="section__sub">공고 더미가 아니라, 실제 데이터 위에서 동작합니다.</p>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>1. 실제로 올라온 공고만</h3>
+            <p style="color:var(--text-dim);margin:0;">
+              샘플 데이터를 하드코딩한 것이 아니라, 공개된 원천 API 서버
+              3곳에서 실시간으로 수집한 공고를 씁니다. 각 카드의
+              <span class="badge badge--source">출처</span> 배지로 어디서 왔는지 표시합니다.
+            </p>
+          </div>
+
+          <div class="card">
+            <h3>2. 이유를 함께 알려줌</h3>
+            <p style="color:var(--text-dim);margin:0;">
+              점수만 보여주는 추천은 신뢰가 어렵습니다. 각 공고마다
+              <strong>매칭 근거</strong>와 <strong>아쉬운 점</strong>,
+              <strong>다음에 할 행동</strong>을 함께 제시합니다.
+            </p>
+          </div>
+
+          <div class="card">
+            <h3>3. 실패해도 안 죽음</h3>
+            <p style="color:var(--text-dim);margin:0;">
+              원천 API 장애, AI 응답 지연, 빈 입력 같은 상황을 모두 처리했습니다.
+              서비스가 멈추지 않고, 대신 왜 안 되는지 안내 메시지를 보여줍니다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 섹션 3: 사용 흐름 ===== -->
+      <section class="section">
+        <div class="section__head">
+          <h2>사용 흐름</h2>
+          <p class="section__sub">입력 → 수집 → 매칭 → AI 설명 → 결과</p>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>단계</th><th>설명</th><th>담당</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>1. 조건 입력</strong></td>
+                  <td>직무, 기술스택, 경력 수준, 최소 희망 금여를 폼에 입력</td>
+                  <td>프론트엔드 (HTML/JS)</td>
+                </tr>
+                <tr>
+                  <td><strong>2. 공고 수집</strong></td>
+                  <td>3개 원천 API 호출 → 필드 이름이 다르니 공통 형태로 정규화 → 중복 제거</td>
+                  <td>서버 (Python)</td>
+                </tr>
+                <tr>
+                  <td><strong>3. 사전 매칭</strong></td>
+                  <td>키워드 일치로 후보를 상위 8건으로 좁힘 (AI 비용 절감)</td>
+                  <td>서버 (Python)</td>
+                </tr>
+                <tr>
+                  <td><strong>4. AI 판정</strong></td>
+                  <td>후보 공고를 AI에 보내 적합도·근거·아쉬운 점·행동을 생성</td>
+                  <td>서버 (Python → OpenAI)</td>
+                </tr>
+                <tr>
+                  <td><strong>5. 결과 표시</strong></td>
+                  <td>점수 순으로 정렬해 카드 형태로 렌더링</td>
+                  <td>프론트엔드 (JS)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 섹션 4: 데이터 출처 (라이선스/약관 준수) ===== -->
+      <section class="section">
+        <div class="section__head">
+          <h2>데이터 출처</h2>
+          <p class="section__sub">모두 API 키가 필요 없는 공개 엔드포인트를 사용합니다.</p>
+        </div>
+
+        <div class="grid" id="source-stats">
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </div>
+
+        <p style="color:var(--text-faint);font-size:0.86rem;margin-top:14px;">
+          각 출처의 이용 약관에 따라 소스 표기를 함께 제공합니다.
+          공고 데이터는 원천 서버에 등록된 내용을 그대로 옮긴 것이며,
+          JobFit는 공고 내용을 수정하거나 보증하지 않습니다.
+        </p>
+      </section>
+
+      <!-- ===== 섹션 5: 기술 스택 ===== -->
+      <section class="section">
+        <div class="section__head"><h2>기술 스택</h2></div>
+        <div class="grid">
+          <div class="card">
+            <h3>프론트엔드</h3>
+            <p style="color:var(--text-dim);margin:0;">
+              순수 <code>HTML</code> / <code>CSS</code> / <code>JavaScript</code>.
+              프레임워크·빌드 도구 없이 동작합니다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>백엔드</h3>
+            <p style="color:var(--text-dim);margin:0;">
+              Vercel Serverless Functions (Python).
+              <code>api/</code> 폴더의 엔드포인트가 각자 독립 함수로 실행됩니다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>AI</h3>
+            <p style="color:var(--text-dim);margin:0;">
+              OpenAI Chat Completions API.
+              키는 Vercel 환경변수로만 주입되어 브라우저에 노출되지 않습니다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__grid">
+      <span>JobFit · 구직 맞춤 AI 추천 서비스</span>
+      <span>
+        데이터:
+        <a href="https://remoteok.com" target="_blank" rel="noopener noreferrer">RemoteOK</a> ·
+        <a href="https://remotive.com" target="_blank" rel="noopener noreferrer">Remotive</a> ·
+        <a href="https://www.arbeitnow.com" target="_blank" rel="noopener noreferrer">Arbeitnow</a>
+      </span>
+    </div>
+  </footer>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/home.js"></script>
+</body>
+</html>
