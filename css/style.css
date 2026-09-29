@@ -1,0 +1,478 @@
+/* ==========================================================================
+   JobFit — 공통 스타일시트
+   이 파일 하나를 3개 페이지(index / recommend / jobs)가 공유한다.
+   vanilla CSS 이므로 :root 변수로 색과 크기를 한 곳에서 관리한다.
+   ========================================================================== */
+
+/* ---------- 1. 디자인 토큰 (변수) ---------- */
+:root {
+  /* 색: 어두운 배경 + 밝은 텍스트. 긴 시간 봐도 피로한 '다크 테마' */
+  --bg: #0b1020;
+  --bg-soft: #121a33;
+  --surface: #161f3d;
+  --surface-2: #1d2850;
+  --border: #2a3663;
+
+  --text: #eaf0ff;
+  --text-dim: #a7b4d8;
+  --text-faint: #7483ab;
+
+  --primary: #5b8cff;
+  --primary-dark: #3f6fe0;
+  --primary-soft: rgba(91, 140, 255, 0.14);
+
+  --accent: #38e0b0;
+  --accent-soft: rgba(56, 224, 176, 0.14);
+
+  --warn: #ffc857;
+  --warn-soft: rgba(255, 200, 87, 0.14);
+  --danger: #ff6b81;
+  --danger-soft: rgba(255, 107, 129, 0.14);
+
+  /* 크기 */
+  --radius: 14px;
+  --radius-sm: 9px;
+  --maxw: 1120px;
+  --gap: 20px;
+
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- 2. 리셋과 기본 ---------- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { line-height: 1.3; margin: 0 0 12px; }
+h1 { font-size: clamp(1.8rem, 4.2vw, 2.6rem); letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.35rem, 3vw, 1.85rem); letter-spacing: -0.01em; }
+h3 { font-size: 1.12rem; }
+p { margin: 0 0 14px; }
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img { max-width: 100%; display: block; }
+
+/* 키보드 사용자를 위한 포커스 표시 (접근성) */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- 3. 레이아웃 ---------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(11, 16, 32, 0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  min-height: 64px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--text);
+}
+.brand:hover { text-decoration: none; }
+
+.brand__mark {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #071024;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.nav { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.nav a {
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.94rem;
+  transition: background 0.15s, color 0.15s;
+}
+.nav a:hover { background: var(--surface); color: var(--text); text-decoration: none; }
+.nav a.is-active { background: var(--primary-soft); color: var(--primary); }
+
+.site-footer {
+  margin-top: 70px;
+  border-top: 1px solid var(--border);
+  padding: 28px 0;
+  color: var(--text-faint);
+  font-size: 0.87rem;
+}
+.site-footer a { color: var(--text-dim); }
+.site-footer__grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+main { padding: 34px 0 20px; }
+
+/* ---------- 4. 히어로 ---------- */
+.hero { padding: 26px 0 34px; }
+.hero__eyebrow {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.hero__lead {
+  font-size: clamp(1rem, 2.2vw, 1.14rem);
+  color: var(--text-dim);
+  max-width: 62ch;
+}
+
+/* ---------- 5. 버튼 ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #06102a;
+  font-size: 0.98rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.08s, opacity 0.15s;
+}
+.btn:hover { background: var(--primary-dark); text-decoration: none; }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn--ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+.btn--ghost:hover { background: var(--surface); color: var(--text); }
+
+.btn--sm { padding: 8px 15px; font-size: 0.88rem; }
+
+/* ---------- 6. 카드 / 섹션 ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.grid {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+}
+
+.section { margin-top: 44px; }
+.section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.section__sub { color: var(--text-faint); font-size: 0.9rem; margin: 0; }
+
+/* ---------- 7. 뱃지 / 태그 ---------- */
+.badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.badge--source { background: var(--primary-soft); color: var(--primary); }
+.badge--remote { background: var(--accent-soft); color: var(--accent); }
+.badge--warn { background: var(--warn-soft); color: var(--warn); }
+
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+/* ---------- 8. 공고 카드 ---------- */
+.job-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  transition: border-color 0.15s, transform 0.12s;
+}
+.job-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+
+.job-card__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+.job-card__title { margin: 0; font-size: 1.04rem; line-height: 1.4; }
+.job-card__company { color: var(--text-dim); font-size: 0.9rem; margin: 0; }
+.job-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--text-faint);
+  font-size: 0.83rem;
+}
+.job-card__foot { margin-top: auto; padding-top: 10px; }
+
+/* 적합도 점수 원형 표기 */
+.score-ring {
+  --pct: 0;
+  width: 52px; height: 52px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  background:
+    conic-gradient(var(--accent) calc(var(--pct) * 1%), var(--surface-2) 0);
+  position: relative;
+}
+.score-ring::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+.score-ring span { position: relative; z-index: 1; }
+
+.score-ring--mid { background: conic-gradient(var(--warn) calc(var(--pct) * 1%), var(--surface-2) 0); }
+.score-ring--low { background: conic-gradient(var(--danger) calc(var(--pct) * 1%), var(--surface-2) 0); }
+
+/* ---------- 9. 폼 ---------- */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field--full { grid-column: 1 / -1; }
+
+.field label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.field__hint { font-size: 0.8rem; color: var(--text-faint); }
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.96rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.field textarea { resize: vertical; min-height: 88px; }
+
+.field input.has-error,
+.field select.has-error,
+.field textarea.has-error { border-color: var(--danger); }
+
+/* ---------- 10. 알림 / 상태 메시지 ---------- */
+.alert {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 13px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.92rem;
+  margin-bottom: 16px;
+}
+.alert__icon { flex-shrink: 0; font-weight: 800; }
+.alert--error { background: var(--danger-soft); border-color: var(--danger); color: #ffc4cd; }
+.alert--warn { background: var(--warn-soft); border-color: var(--warn); color: #ffe4ac; }
+.alert--info { background: var(--primary-soft); border-color: var(--primary); color: #c3d6ff; }
+.alert[hidden] { display: none; }
+
+/* ---------- 11. 로딩 ---------- */
+.spinner {
+  width: 15px; height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 스켈레톤 (내용이 올 때까지 회색 자리표시자) */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s infinite;
+  border-radius: var(--radius);
+  height: 128px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ---------- 12. 표 ---------- */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.91rem; }
+th, td {
+  text-align: left;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+th { color: var(--text-faint); font-weight: 700; font-size: 0.83rem; white-space: nowrap; }
+td code {
+  background: var(--surface-2);
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 0.86em;
+  color: var(--accent);
+}
+
+/* ---------- 13. 빈 상태 ---------- */
+.empty {
+  text-align: center;
+  padding: 44px 20px;
+  color: var(--text-faint);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+.empty__icon { font-size: 2.2rem; margin-bottom: 10px; }
+
+/* ---------- 14. AI 근거 목록 ---------- */
+.reason-list { margin: 0; padding-left: 18px; }
+.reason-list li { margin-bottom: 4px; font-size: 0.9rem; color: var(--text-dim); }
+
+.ai-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ai-note--off { background: var(--warn-soft); color: var(--warn); }
+
+/* ---------- 15. 반응형 (모바일) ----------
+   기준: 768px 이하에서 1열, 480px 이하에서 더 촘촘하게.
+   최소 2가지 화면 크기에서 확인하기 위한 기준이다. */
+
+@media (max-width: 768px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .grid { grid-template-columns: 1fr; }
+  main { padding-top: 22px; }
+
+  /* 모바일에서는 내비게이션을 두 줄로 아래로 내린다 */
+  .site-header__inner { min-height: auto; padding: 12px 0; gap: 10px; }
+  .nav { width: 100%; }
+  .nav a { flex: 1; text-align: center; padding: 8px 6px; font-size: 0.86rem; }
+}
+
+@media (max-width: 480px) {
+  :root { --gap: 14px; }
+  body { font-size: 15px; }
+  .container { padding: 0 14px; }
+  .card, .job-card { padding: 15px; }
+  .score-ring { width: 46px; height: 46px; font-size: 0.85rem; }
+  .site-footer__grid { flex-direction: column; gap: 8px; }
+}
+
+/* 사용자가 모션 감소를 설정한 경우 애니메이션을 끈다 (접근성) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
