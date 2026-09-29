@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 맞춤 추천 — JobFit</title>
+  <meta name="description" content="직무·기술스택·경력·희망 금여를 입력하면 실제 원천 공고에서 AI가 적합한 공고를 골라 이유와 함께 추천합니다." />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="/index.html">
+        <span class="brand__mark" aria-hidden="true">🎯</span>
+        JobFit
+      </a>
+      <nav class="nav" aria-label="주요 메뉴">
+        <a href="/index.html">홈</a>
+        <a href="/recommend.html">AI 추천</a>
+        <a href="/jobs.html">공고 목록</a>
+        <a href="/about.html">서비스 소개</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+
+      <section class="hero" style="padding-bottom:20px;">
+        <h1>내 조건 입력하기</h1>
+        <p class="hero__lead">
+          입력한 조건으로 실제 원천 서버의 공고를 좁힌 뒤,
+          상위 후보를 AI가 다시 검토해 근거와 함께 추천합니다.
+          <span class="field__hint">* 표시된 항목은 필수입니다.</span>
+        </p>
+      </section>
+
+      <!-- ===== 실패 처리 1: 빈 입력 / 서버 오류 안내 영역 ===== -->
+      <div class="alert" id="form-alert" role="alert" hidden>
+        <span class="alert__icon" aria-hidden="true">!</span>
+        <span id="form-alert-text"></span>
+      </div>
+
+      <!-- ===== 입력 폼 ===== -->
+      <section class="card" style="margin-bottom:28px;">
+        <form id="recommend-form" novalidate>
+          <div class="form-grid">
+
+            <div class="field">
+              <label for="role">희망 직무 <span style="color:var(--danger);">*</span></label>
+              <select id="role" name="role" required>
+                <option value="">선택해 주세요</option>
+                <option value="프론트">프론트엔드</option>
+                <option value="백엔드">백엔드</option>
+                <option value="풀스택">풀스택</option>
+                <option value="ai">AI / 머신러닝</option>
+                <option value="데이터">데이터 분석 / 엔지니어</option>
+                <option value="devops">DevOps / SRE</option>
+                <option value="모바일">모바일</option>
+                <option value="qa">QA / 테스트</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="level">경력 수준</label>
+              <select id="level" name="level">
+                <option value="">상관없음</option>
+                <option value="junior">신입 / 주니어</option>
+                <option value="mid">미드 (2~5년)</option>
+                <option value="senior">시니어 (5년+)</option>
+              </select>
+            </div>
+
+            <div class="field field--full">
+              <label for="skills">기술스택 <span style="color:var(--danger);">*</span></label>
+              <input type="text" id="skills" name="skills"
+                     placeholder="예: python, docker, aws (쉼표로 구분)"
+                     autocomplete="off" />
+              <span class="field__hint">
+                여러 개를 쉼표로 나누어 입력합니다. 공고 텍스트와 직접 비교되어 정확도가 올라갑니다.
+              </span>
+            </div>
+
+            <div class="field">
+              <label for="min_salary">최소 희망 금여 (연봉)</label>
+              <input type="number" id="min_salary" name="min_salary"
+                     min="0" step="1000" placeholder="예: 50000" />
+              <span class="field__hint">공고에 급여 정보가 없으면 불이익 없이 넘어갑니다.</span>
+            </div>
+
+            <div class="field">
+              <label for="top_n">추천 개수</label>
+              <select id="top_n" name="top_n">
+                <option value="3">3개</option>
+                <option value="5" selected>5개</option>
+                <option value="8">8개</option>
+                <option value="10">10개</option>
+              </select>
+            </div>
+
+            <div class="field field--full">
+              <label for="summary">자기소개 (선택)</label>
+              <textarea id="summary" name="summary"
+                        placeholder="예: 3년차 백엔드 개발자입니다. 주로 파이썬과.fastAPI를 쓰고, 최근은 데이터 파이프라인에 관심이 있습니다."></textarea>
+              <span class="field__hint">자유롭게 적어도 AI 판정 단서에 포함됩니다. 없어도 동작합니다.</span>
+            </div>
+
+          </div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:20px;">
+            <button type="submit" class="btn" id="submit-btn">추천 받기</button>
+            <button type="button" class="btn btn--ghost" id="reset-btn">초기화</button>
+            <span id="ai-badge" class="ai-note ai-note--off" hidden></span>
+          </div>
+        </form>
+      </section>
+
+      <!-- ===== 결과 영역 ===== -->
+      <section id="results-section" hidden>
+        <div class="section__head">
+          <h2>추천 결과</h2>
+          <p class="section__sub" id="results-sub"></p>
+        </div>
+
+        <!-- AI 호출 실패/미설정 시 표시되는 안내 -->
+        <div class="alert alert--warn" id="ai-fallback-alert" hidden>
+          <span class="alert__icon" aria-hidden="true">AI</span>
+          <span id="ai-fallback-text"></span>
+        </div>
+
+        <div class="grid" id="results"></div>
+      </section>
+
+      <!-- ===== 로딩 상태 ===== -->
+      <section id="loading-section" hidden>
+        <div class="section__head">
+          <h2>분석 중입니다</h2>
+          <p class="section__sub">공고를 모으고 AI가 검토하고 있습니다. 잠시만 기다려 주세요.</p>
+        </div>
+        <div class="grid" id="loading-skeletons"></div>
+      </section>
+
+      <!-- ===== 최초 진입 안내 ===== -->
+      <section class="empty" id="initial-hint">
+        <div class="empty__icon">🎯</div>
+        <h3>조건을 입력하고 '추천 받기'를 눌러주세요</h3>
+        <p>직무와 기술스택만 입력해도 바로 결과가 나옵니다.</p>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__grid">
+      <span>JobFit · 구직 맞춤 AI 추천 서비스</span>
+      <span>
+        데이터:
+        <a href="https://remoteok.com" target="_blank" rel="noopener noreferrer">RemoteOK</a> ·
+        <a href="https://remotive.com" target="_blank" rel="noopener noreferrer">Remotive</a> ·
+        <a href="https://www.arbeitnow.com" target="_blank" rel="noopener noreferrer">Arbeitnow</a>
+      </span>
+    </div>
+  </footer>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/recommend.js"></script>
+</body>
+</html>
