@@ -151,6 +151,9 @@ def _run(request):
             "results": results,
             "ai_status": ai_status,
             "ai_message": ai_error,
+            # 어떤 provider 가, 어떤 모델로 판정했는지 투명하게 알린다.
+            # 키 값은 담기지 않는다(describe()가 키를 노출하지 않는다).
+            "ai_provider": ai.describe(),
             "profile": profile,
             "total_jobs": len(jobs),
             "candidate_count": len(candidates),

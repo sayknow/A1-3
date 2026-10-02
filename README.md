@@ -52,9 +52,10 @@
 - 외부 패키지 의존성 **0개** (표준 라이브러리 `urllib`, `json`만 사용)
 
 ### AI
-- **OpenAI Chat Completions API** (`gpt-4o-mini`)
+- **provider-agnostic 구조**: 기본은 Google Gemini(`gemini-3.8-flash`), `AI_PROVIDER=openai` 로 바꾸면 OpenAI(`gpt-4o-mini`)도 그대로 동작
 - 키는 Vercel 환경변수로만 주입 → 브라우저에 절대 노출되지 않음
 - 키가 없어도 **키워드 매칭 점수로 정상 동작** (기능 저하 시 안내)
+- 키가 있어도 호출이 실패해도(인증 오류·쿼터 초과·파싱 실패) 자동으로 폴백하며, 어떤 상태였는지 응답의 `ai_status` 로 구분해 알려 줌
 
 ### 데이터 출처 (모두 API 키 불필요)
 
@@ -97,7 +98,7 @@
 │       ├── cache.py        #   인메모리 TTL 캐시
 │       ├── normalize.py    #   필드 통일 · 중복 제거
 │       ├── matching.py     #   키워드 사전 매칭 · 점수 산식
-│       ├── ai.py           #   OpenAI 호출 · 폴백 처리
+│       ├── ai.py           #   provider 레지스트리 · LLM 호출 · 폴백 처리
 │       └── providers/      #   소스별 어댑터
 │           ├── remoteok.py
 │           ├── remotive.py
@@ -178,8 +179,11 @@ API 키를 코드에 적어 두면 저장소에 공개됩니다. 누군가 그 �
 
 | 변수명 | 필수 | 기본값 | 설명 |
 | --- | --- | --- | --- |
-| `OPENAI_API_KEY` | 선택 | 없음 | OpenAI API 키. 없으면 키워드 매칭만 동작 |
-| `OPENAI_MODEL` | 선택 | `gpt-4o-mini` | 사용할 모델 |
+| `AI_PROVIDER` | 선택 | `gemini` | 사용할 AI 제공자 (`gemini` / `openai`) |
+| `GEMINI_API_KEY` | 선택 | 없음 | Google Gemini API 키. 없으면 키워드 매칭만 동작 |
+| `GEMINI_MODEL` | 선택 | `gemini-3.8-flash` | 사용할 모델 |
+| `OPENAI_API_KEY` | 선택 | 없음 | `AI_PROVIDER=openai` 일 때만 사용 |
+| `OPENAI_MODEL` | 선택 | `gpt-4o-mini` | `AI_PROVIDER=openai` 일 때의 모델 |
 
 > **AI 키 없이도 서비스는 100% 동작합니다.** AI 대신 키워드 점수를 계산해
 > 결과를 보여주고, 화면에 "AI 미연동 상태" 배지를 표시합니다.
@@ -196,19 +200,19 @@ cp .env.example .env.local
 ### Vercel 에서 설정
 
 1. Vercel 대시보드 → 해당 프로젝트 → **Settings** → **Environment Variables**
-2. `OPENAI_API_KEY` 추가 (Production / Preview / Development 모두 체크)
+2. `AI_PROVIDER=gemini` 과 `GEMINI_API_KEY` 추가 (Production / Preview / Development 모두 체크)
 3. Redeploy
 
 또는 CLI 로:
 
 ```bash
-vercel env add OPENAI_API_KEY production
+vercel env add GEMINI_API_KEY production
 ```
 
 ### 키 유출 시 대응
 
 1. Vercel 대시보드에서 해당 변수를 **삭제**
-2. OpenAI 대시보드에서 키를 **폐기(Revoke)** 하고 새로 발급
+2. AI 제공자 대시보드에서 키를 **폐기(Revoke)** 하고 새로 발급 (Gemini: [AI Studio](https://aistudio.google.com/apikey))
 3. 새 키를 Vercel 에 등록 후 Redeploy
 
 > 이 저장소에는 키가 커밋된 적이 없으므로 **커밋 이력 정리(rebase·history rewrite)가 불필요**합니다.
@@ -386,4 +390,4 @@ AI 맞춤 추천을 반환합니다.
 
 - 코드: 과제 수행용 작성물
 - 공고 데이터: [RemoteOK](https://remoteok.com) · [Remotive](https://remotive.com) · [Arbeitnow](https://www.arbeitnow.com) 각 이용 약관 준범
-- AI: OpenAI Chat Completions API
+- AI: Google Gemini API (`gemini-3.8-flash`), provider 교체 가능 구조

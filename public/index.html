@@ -111,7 +111,7 @@
                 <tr>
                   <td><strong>4. AI 판정</strong></td>
                   <td>후보 공고를 AI에 보내 적합도·근거·아쉬운 점·행동을 생성</td>
-                  <td>서버 (Python → OpenAI)</td>
+                  <td>서버 (Python → AI)</td>
                 </tr>
                 <tr>
                   <td><strong>5. 결과 표시</strong></td>
@@ -165,7 +165,8 @@
           <div class="card">
             <h3>AI</h3>
             <p style="color:var(--text-dim);margin:0;">
-              OpenAI Chat Completions API.
+              Google Gemini API (<code>gemini-3.8-flash</code>). 제공자는
+              환경변수만 바꾸면 교체되며,<code>urllib</code> 표준 라이브러리만 사용합니다.
               키는 Vercel 환경변수로만 주입되어 브라우저에 노출되지 않습니다.
             </p>
           </div>

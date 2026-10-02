@@ -1,7 +1,7 @@
 """
-AI 연동 모듈 (OpenAI Chat Completions).
+AI 연동 모듈 (provider-agnostic).
 
-설계상 중요한 원칙 두 가지:
+설계상 중요한 원칙 세 가지:
 
 1) **키는 절대 코드에 넣지 않는다.**
    os.environ 으로만 읽는다. Vercel 대시보드에서 환경변수로 등록하면
@@ -11,23 +11,80 @@ AI 연동 모듈 (OpenAI Chat Completions).
    recommend() 는 실패하면 None 을 돌려주고, 호출한 쪽은
    '코드 점수만으로 계산한 결과 + AI unavailable 안내' 로 대체한다.
    이게 과제 제약사항의 '실패 상황 고려' 를 충족한다.
+
+3) **provider 는 환경변수 하나로 갈아끼운다.**
+   AI_PROVIDER 에 'gemini' 또는 'openai' 를 넣으면 되고,
+   어느 쪽이든 recommend() 를 호출하는 코드(api/recommend.py)는
+   provider 를 전혀 모른다. SDK 를 쓰지 않고 urllib + 표준 라이브러리만 쓴다.
 """
 
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 
 
-# 모델명은 환경변수로 갈아끼울 수 있게 해 둔다.
-DEFAULT_MODEL = "gpt-4o-mini"
-API_URL = "https://api.openai.com/v1/chat/completions"
+# ---------------------------------------------------------------------------
+# provider 레지스트리
+#
+# 새 provider 를 붙일 때는 여기에 항목 하나만 추가하면 된다.
+# 그 provider 는 recommend() 안에서 쓰지 않으므로 스위칭 비용이 0이다.
+# ---------------------------------------------------------------------------
+PROVIDERS = {
+    "gemini": {
+        "label": "Google Gemini",
+        "key_env": "GEMINI_API_KEY",
+        "model_env": "GEMINI_MODEL",
+        # 신규 프로젝트 접근 제한이 있는 2.5 계열을 피해서 선택했다.
+        # 더 저렴한 모델이 필요하면 gemini-3.5-flash-lite 로 바꾸면 된다.
+        "default_model": "gemini-3.8-flash",
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        # Gemini 는 키를 쿼리스트링(?key=)으로 받는다.
+        "auth": "query",
+    },
+    "openai": {
+        "label": "OpenAI",
+        "key_env": "OPENAI_API_KEY",
+        "model_env": "OPENAI_MODEL",
+        "default_model": "gpt-4o-mini",
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "auth": "bearer",
+    },
+}
+
+DEFAULT_PROVIDER = "gemini"
 TIMEOUT = 25  # 초. 너무 길게 잡으면 Vercel 함수 타임아웃에 걸린다.
+
+
+def active_provider_name():
+    """현재 사용할 provider 이름. 모르는 값이면 기본값으로 떨어진다."""
+    name = os.environ.get("AI_PROVIDER", DEFAULT_PROVIDER).strip().lower()
+    return name if name in PROVIDERS else DEFAULT_PROVIDER
 
 
 def get_api_key():
     """환경변수에서 API 키를 읽는다. 없으면 빈 문자열."""
-    return os.environ.get("OPENAI_API_KEY", "").strip()
+    spec = PROVIDERS[active_provider_name()]
+    return os.environ.get(spec["key_env"], "").strip()
+
+
+def get_model():
+    """현재 provider 에서 쓸 모델명."""
+    spec = PROVIDERS[active_provider_name()]
+    return os.environ.get(spec["model_env"], "").strip() or spec["default_model"]
+
+
+def describe():
+    """로그·응답에 붙일 provider 정보. 키 자체는 절대 포함하지 않는다."""
+    name = active_provider_name()
+    spec = PROVIDERS[name]
+    return {
+        "provider": name,
+        "label": spec["label"],
+        "model": get_model(),
+        "configured": bool(get_api_key()),
+    }
 
 
 def is_available():
@@ -36,7 +93,7 @@ def is_available():
 
 
 def build_prompt(profile, candidates):
-    """OpenAI에 보낼 프롬프트를 만든다.
+    """LLM에 보낼 프롬프트를 만든다.
 
     토큰 절약을 위해 후보 공고는 미리 잘라서(설명 600자, 상위 8건) 넣는다.
     """
@@ -67,7 +124,7 @@ def build_prompt(profile, candidates):
             )
         )
 
-    prompt = """너는 원격 구직匹配的 경력자다. 아래는 구직자의 조건과 후보 공고 목록이다.
+    prompt = """너는 원격 구직 매칭 경력자다. 아래는 구직자의 조건과 후보 공고 목록이다.
 
 [구직자 조건]
 - 직무: {role}
@@ -97,6 +154,9 @@ def build_prompt(profile, candidates):
     return prompt
 
 
+SYSTEM_PROMPT = "당신은 공고 평가 보조 AI입니다. 반드시 유효한 JSON만 출력합니다."
+
+
 def recommend(profile, candidates):
     """AI에게 추천 근거를 요청한다.
 
@@ -110,42 +170,15 @@ def recommend(profile, candidates):
 
     prompt = build_prompt(profile, candidates)
 
-    messages = [
-        {
-            "role": "system",
-            "content": "당신은 공고 평가 보조 AI입니다. 반드시 유효한 JSON만 출력합니다.",
-        },
-        {"role": "user", "content": prompt},
-    ]
-
-    body = json.dumps({
-        "model": os.environ.get("OPENAI_MODEL", DEFAULT_MODEL),
-        "messages": messages,
-        "temperature": 0.2,   # 일관된 판정을 위해 낮은 값
-        "max_tokens": 1600,  # 비용 상한
-    }).encode("utf-8")
-
-    request = urllib.request.Request(
-        API_URL,
-        data=body,
-        headers={
-            "Authorization": "Bearer {}".format(key),
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-
-        content = payload["choices"][0]["message"]["content"]
-        return _parse_ai_json(content)
-
+        if active_provider_name() == "openai":
+            text = _call_openai(key, prompt)
+        else:
+            text = _call_gemini(key, prompt)
     except urllib.error.HTTPError as error:
-        # 429(쿼터 초과), 401(키 오류) 등은 사용자에게 그대로 노출하면
+        # 429(쿼터 초과), 401/403(키 오류) 등은 사용자에게 그대로 노출하면
         # 내부 구현이 드러나므로, 상태 코드만 로그에 남긴다.
-        print("[ai] HTTPError {}".format(error.code))
+        print("[ai] {} HTTPError {}".format(active_provider_name(), error.code))
         return None
     except urllib.error.URLError as error:
         print("[ai] URLError {}".format(getattr(error, "reason", error)))
@@ -156,6 +189,69 @@ def recommend(profile, candidates):
     except Exception as error:
         print("[ai] unexpected error {}".format(error))
         return None
+
+    return _parse_ai_json(text)
+
+
+# ---------------------------------------------------------------------------
+# provider 별 실제 HTTP 호출부
+# ---------------------------------------------------------------------------
+
+
+def _call_gemini(key, prompt):
+    """Google Gemini generateContent 호출 → 텍스트 조각."""
+    spec = PROVIDERS["gemini"]
+    model = get_model()
+    url = spec["endpoint"].format(model=model)
+    url = "{}?key={}".format(url, urllib.parse.quote(key, safe=""))
+
+    body = json.dumps({
+        "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.2,   # 일관된 판정을 위해 낮은 값
+            "maxOutputTokens": 1600,  # 비용 상한
+            # JSON만 나오도록 지정. 그래도 아래 파서가 안전망을 한 겹 더 둔다.
+            "responseMimeType": "application/json",
+        },
+    }).encode("utf-8")
+
+    payload = _post_json(url, body, {})
+    candidates = payload["candidates"]
+    parts = candidates[0]["content"]["parts"]
+    return "".join(part.get("text", "") for part in parts)
+
+
+def _call_openai(key, prompt):
+    """OpenAI Chat Completions 호출 → 텍스트."""
+    body = json.dumps({
+        "model": get_model(),
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.2,
+        "max_tokens": 1600,
+    }).encode("utf-8")
+
+    payload = _post_json(
+        "https://api.openai.com/v1/chat/completions",
+        body,
+        {"Authorization": "Bearer {}".format(key)},
+    )
+    return payload["choices"][0]["message"]["content"]
+
+
+def _post_json(url, body, headers):
+    """공통 POST 헬퍼. Authorization 헤더가 필요 없는 provider 는 빈 dict."""
+    request = urllib.request.Request(
+        url,
+        data=body,
+        headers=dict({"Content-Type": "application/json"}, **headers),
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+        return json.loads(response.read().decode("utf-8"))
 
 
 def _parse_ai_json(content):
