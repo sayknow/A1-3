@@ -19,9 +19,10 @@ import sys
 import time
 from http.server import BaseHTTPRequestHandler
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+# _lib 패키지는 이 파일과 같은 폴더(api/)에 있으므로 그 폴더를 넣는다.
+API_DIR = os.path.dirname(os.path.abspath(__file__))
+if API_DIR not in sys.path:
+    sys.path.insert(0, API_DIR)
 
 from _lib import ai  # noqa: E402
 from _lib.aggregate import get_jobs  # noqa: E402

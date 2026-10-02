@@ -18,11 +18,13 @@ import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler
 
-# Vercel 이 실행 디렉터리를 다르게 잡는 경우가 있어, 프로젝트 루트를
-# sys.path 에 직접 넣어 `from _lib...` 임포트가 항상 되게 한다.
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+# Vercel 은 이 파일을 /var/task/api/jobs.py 로 복사해 실행한다.
+# _lib 패키지는 이 파일과 같은 폴더(api/)에 있으므로, 그 폴더를
+# sys.path 에 넣어야 `from _lib import ...` 가 된다.
+# (프로젝트 루트를 넣으면 _lib 을 못 찾는다 — 실제로 500이 났던 원인)
+API_DIR = os.path.dirname(os.path.abspath(__file__))
+if API_DIR not in sys.path:
+    sys.path.insert(0, API_DIR)
 
 from _lib import cache  # noqa: E402
 from _lib.aggregate import describe_sources, get_jobs  # noqa: E402
