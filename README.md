@@ -107,15 +107,18 @@
 │   └── capture-screenshots.js   # Playwright 자동 캡처
 │
 ├── dev_server.py           # 로컬 개발 서버 (배포에는 미사용)
-├── vercel.json             # Vercel 설정
 ├── .env.example            # 환경변수 예시 (실제 키 없음)
 └── .gitignore              # .env 등 키 파일 제외 규칙
 ```
 
-> **왜 `public/` 에 정적 파일이 있나요?**
-> Vercel 은 `public/` 을 정적 파일 루트로, 프로젝트 루트의 `api/` 를
-> 서버리스 함수로 인식합니다. 정적 파일이 루트에 흩어져 있으면
-> `outputDirectory` 설정이 함수를 정적 자산으로 오인해 `/api/*` 가 404가 됩니다.
+> **배포 설정에 `vercel.json` 이 없는 이유**
+> 이 프로젝트는 Vercel **zero-config** 로 배포됩니다. `api/` 와 `public/` 만 있으면
+> Vercel 이 서버리스 함수와 정적 파일을 동시에 자동 인식합니다.
+>
+> 실제로 `outputDirectory` 를 `vercel.json` 에 명시하면 Vercel 이
+> "빌드 출력이 지정된 디렉터리" 모드로 전환하면서 `api/` 를 함수로 보지 않고
+> 정적 자산으로 취급해 `/api/*` 가 404가 됩니다. 설정 파일이 오히려
+> 자동 인식을 방해하는 경우입니다.
 
 ---
 
