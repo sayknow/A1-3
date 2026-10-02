@@ -20,6 +20,7 @@ AI 연동 모듈 (provider-agnostic).
 
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -36,9 +37,11 @@ PROVIDERS = {
         "label": "Google Gemini",
         "key_env": "GEMINI_API_KEY",
         "model_env": "GEMINI_MODEL",
-        # 신규 프로젝트 접근 제한이 있는 2.5 계열을 피해서 선택했다.
-        # 더 저렴한 모델이 필요하면 gemini-3.5-flash-lite 로 바꾸면 된다.
-        "default_model": "gemini-3.8-flash",
+        # 신규 프로젝트는 3.5 Flash-Lite 또는 3.8 Flash 를 쓰라고 공식 안내하고 있다
+        # (2.5 계열은 신규 접근 제한). 실제로 3.8 Flash 는 혼잡할 때 503 을 던져
+        # 재시도 없이는 간헐적으로 폴백으로 내려가므로, 기본값은 더 가벼운
+        # 3.5 Flash-Lite 로 잡고 3.8 은 GEMINI_MODEL 로 선택할 수 있게 남긴다.
+        "default_model": "gemini-3.5-flash-lite",
         "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
         # Gemini 는 키를 쿼리스트링(?key=)으로 받는다.
         "auth": "query",
@@ -55,6 +58,11 @@ PROVIDERS = {
 
 DEFAULT_PROVIDER = "gemini"
 TIMEOUT = 25  # 초. 너무 길게 잡으면 Vercel 함수 타임아웃에 걸린다.
+
+# 일시적 장애용 재시도. 이 값들을 안 고치면 provider 서버가 혼잡할 때마다
+# 그 순간 그냥 폴백으로 내려가 버린다(사용자 입장에서는 'AI가 가끔 안 된다').
+RETRY_STATUS = (429, 500, 502, 503, 504)
+RETRY_DELAYS = (0.8, 1.8)  # 초. 짧게 두 번만 시도해서 총 지연은 2.6초 이내.
 
 
 def active_provider_name():
@@ -248,15 +256,36 @@ def _call_openai(key, prompt):
 
 
 def _post_json(url, body, headers):
-    """공통 POST 헬퍼. Authorization 헤더가 필요 없는 provider 는 빈 dict."""
-    request = urllib.request.Request(
-        url,
-        data=body,
-        headers=dict({"Content-Type": "application/json"}, **headers),
-        method="POST",
-    )
-    with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-        return json.loads(response.read().decode("utf-8"))
+    """공통 POST 헬퍼. 일시적 오류에는 짧게 재시도한다.
+
+    Authorization 헤더가 필요 없는 provider 는 빈 dict 를 넘긴다.
+    재시도해도 실패하면 마지막 예외를 그대로 올려서 호출부가 처리한다.
+    """
+    last_error = None
+
+    for attempt in range(len(RETRY_DELAYS) + 1):
+        request = urllib.request.Request(
+            url,
+            data=body,
+            headers=dict({"Content-Type": "application/json"}, **headers),
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as error:
+            last_error = error
+            # 재시도해도 같은 답이 나오는 오류(인증 실패, 잘못된 요청 등)는
+            # 기다릴 이유가 없으므로 곧장 올려서 원인을 드러낸다.
+            if error.code not in RETRY_STATUS:
+                raise
+            if attempt >= len(RETRY_DELAYS):
+                raise
+            print("[ai] retry on HTTP {} (attempt {}/{})".format(
+                error.code, attempt + 2, len(RETRY_DELAYS) + 1))
+            time.sleep(RETRY_DELAYS[attempt])
+
+    raise last_error
 
 
 def _read_error_body(error, key, limit=300):
