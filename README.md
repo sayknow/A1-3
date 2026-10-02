@@ -6,7 +6,7 @@
 
 순수 HTML / CSS / JavaScript + Vercel Serverless Functions (Python) 로 만든 구직 추천 웹 서비스
 
-[데모 보기](https://jobfit.vercel.app) · [기획서](docs/서비스기획서.md)
+[데모 보기](https://jobfit-seven.vercel.app) · [기획서](docs/서비스기획서.md)
 
 </div>
 
@@ -69,22 +69,22 @@
 
 ```
 .
-├── index.html              # 홈 — 소개 / 사용 흐름 / 데이터 출처
-├── recommend.html          # AI 추천 (핵심 기능)
-├── jobs.html               # 공고 목록 (필터 · 검색 · 정렬)
-├── about.html              # 서비스 소개 · 실패 처리 기준 · 한계
+├── public/                 # ← Vercel 이 정적 루트로 서빙하는 폴더
+│   ├── index.html          #   홈 — 소개 / 사용 흐름 / 데이터 출처
+│   ├── recommend.html      #   AI 추천 (핵심 기능)
+│   ├── jobs.html           #   공고 목록 (필터 · 검색 · 정렬)
+│   ├── about.html          #   서비스 소개 · 실패 처리 기준 · 한계
+│   ├── css/
+│   │   └── style.css       #   공통 스타일시트 (4개 페이지 공유)
+│   ├── js/
+│   │   ├── common.js       #   공통 유틸 (포맷, 이스케이프, 카드 렌더링)
+│   │   ├── api.js          #   fetch 래퍼 (타임아웃 · 오류 처리)
+│   │   ├── home.js         #   홈 페이지 전용
+│   │   ├── recommend.js    #   AI 추천 페이지 전용
+│   │   └── jobs.js         #   공고 목록 페이지 전용
+│   └── images/             #   이미지 (현재 비어 있음)
 │
-├── css/
-│   └── style.css           # 공통 스타일시트 (3개 페이지 공유)
-│
-├── js/
-│   ├── common.js           # 공통 유틸 (포맷, 이스케이프, 카드 렌더링)
-│   ├── api.js              # fetch 래퍼 (타임아웃 · 오류 처리)
-│   ├── home.js             # 홈 페이지 전용
-│   ├── recommend.js        # AI 추천 페이지 전용
-│   └── jobs.js             # 공고 목록 페이지 전용
-│
-├── api/                    # ← Vercel Serverless Functions
+├── api/                    # ← Vercel Serverless Functions (루트에 있어야 인식됨)
 │   ├── jobs.py             # GET  /api/jobs       공고 목록
 │   ├── recommend.py        # POST /api/recommend  AI 추천
 │   ├── requirements.txt    # 파이썬 의존성 (현재 없음)
@@ -100,14 +100,22 @@
 │           └── arbeitnow.py
 │
 ├── docs/
-│   └── 서비스기획서.md      # 서비스 기획서 (제출 항목)
+│   ├── 서비스기획서.md      # 서비스 기획서 (제출 항목)
+│   └── screenshots/        # 증빙용 스크린샷 9장
 │
-├── images/                 # 이미지 (현재 비어 있음)
+├── scripts/
+│   └── capture-screenshots.js   # Playwright 자동 캡처
+│
 ├── dev_server.py           # 로컬 개발 서버 (배포에는 미사용)
 ├── vercel.json             # Vercel 설정
 ├── .env.example            # 환경변수 예시 (실제 키 없음)
 └── .gitignore              # .env 등 키 파일 제외 규칙
 ```
+
+> **왜 `public/` 에 정적 파일이 있나요?**
+> Vercel 은 `public/` 을 정적 파일 루트로, 프로젝트 루트의 `api/` 를
+> 서버리스 함수로 인식합니다. 정적 파일이 루트에 흩어져 있으면
+> `outputDirectory` 설정이 함수를 정적 자산으로 오인해 `/api/*` 가 404가 됩니다.
 
 ---
 

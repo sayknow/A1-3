@@ -23,6 +23,9 @@ from urllib.parse import urlparse, parse_qs
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(ROOT, "api"))
 
+# 정적 파일은 public/ 아래에 있다. (Vercel 은 이 폴더를 정적 루트로 삼는다)
+PUBLIC_ROOT = os.path.join(ROOT, "public")
+
 from api.jobs import handler as jobs_handler      # noqa: E402
 from api.recommend import handler as recommend_handler  # noqa: E402
 
@@ -82,8 +85,8 @@ class Handler(BaseHTTPRequestHandler):
             rel += "index.html"
 
         # 디렉터리 탈출(..) 차단
-        full = os.path.normpath(os.path.join(ROOT, rel))
-        if not full.startswith(ROOT):
+        full = os.path.normpath(os.path.join(PUBLIC_ROOT, rel))
+        if not full.startswith(PUBLIC_ROOT):
             self._error(403, "접근이 허용되지 않는 경로입니다.")
             return
 
