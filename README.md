@@ -6,7 +6,11 @@
 
 순수 HTML / CSS / JavaScript + Vercel Serverless Functions (Python) 로 만든 구직 추천 웹 서비스
 
-[데모 보기](https://jobfit-seven.vercel.app) · [기획서](docs/서비스기획서.md)
+[데모 보기](https://jobfit-seven.vercel.app) · [기획서](docs/서비스기획서.md) · [저장소](https://github.com/sayknow/A1-3)
+
+> **실제 배포 주소: https://jobfit-seven.vercel.app**
+> (`jobfit.vercel.app` 은 이미 다른 서비스가 선점한 도메인이라 Vercel 이
+> 임의의 이름을 붙였다. 별도 도메인 구매·연결 없이 동작한다.)
 
 </div>
 
@@ -119,6 +123,10 @@
 > "빌드 출력이 지정된 디렉터리" 모드로 전환하면서 `api/` 를 함수로 보지 않고
 > 정적 자산으로 취급해 `/api/*` 가 404가 됩니다. 설정 파일이 오히려
 > 자동 인식을 방해하는 경우입니다.
+>
+> Vercel 대시보드의 **Framework Preset** 은 `Other` 로 두어야 합니다.
+> `Python` 으로 지정하면 Vercel 이 단일 엔트리포인트(`app.py` 등)를
+> 찾으려고 해 `api/` 아래 여러 엔드포인트 구조와 맞지 않습니다.
 
 ---
 
@@ -138,6 +146,8 @@ python3 dev_server.py
 
 > `dev_server.py` 는 Vercel 이 로컬에서 어떻게 동작하는지 재현하는 개발용 서버입니다.
 > 배포에는 사용되지 않으며, 이 파일 없이도 Vercel 은 정상 동작합니다.
+> 로컬 서버는 엔드포인트의 실제 로직인 `api/jobs.py` 의 `_run()` 을 직접 호출하고,
+> 배포 환경에서는 Vercel 이 같은 `_run()` 을 `BaseHTTPRequestHandler` 로 감싸 실행합니다.
 
 ### 방법 2 — Vercel CLI 사용
 
@@ -290,6 +300,25 @@ AI 맞춤 추천을 반환합니다.
 | 응답 지연 (45초) | `AbortController` 로 요청 중단 + 타임아웃 안내 |
 | 네트워크 단절 | "서버에 연결하지 못했습니다" 안내 |
 | 소스 1곳 실패 | 나머지 소스로 계속 제공 (부분 실패 허용) |
+| 서버 내부 예외 | 핸들러가 500 JSON 응답으로 변환 (프로세스 죽지 않음) |
+
+### 운영 환경 검증 결과 (실제 배포 주소 기준)
+
+`https://jobfit-seven.vercel.app` 에서 확인한 실제 응답입니다.
+
+| 요청 | 응답 |
+| --- | --- |
+| `GET /api/jobs?limit=100` | 200 · 전체 135건 (Arbeitnow 60 / RemoteOK 59 / Remotive 16) |
+| `POST /api/recommend` (정상 입력) | 200 · 후보 8건 축소 후 top_n 건 선별 |
+| `GET /api/jobs?limit=abc` | 400 |
+| `GET /api/jobs?limit=9999` | 400 |
+| `GET /api/recommend` | 405 |
+| `POST /api/recommend` (빈 본문) | 400 |
+| `POST /api/recommend` (깨진 JSON) | 400 |
+| `GET /api/nope` | 404 |
+
+> AI 키 없이 배포된 상태이므로 `ai_status: "disabled"` 로 응답하며,
+> 화면에는 "AI 미연동 상태" 배지와 함께 코드 점수 기반 결과가 정상 표시됩니다.
 
 ---
 
