@@ -176,9 +176,14 @@ def recommend(profile, candidates):
         else:
             text = _call_gemini(key, prompt)
     except urllib.error.HTTPError as error:
-        # 429(쿼터 초과), 401/403(키 오류) 등은 사용자에게 그대로 노출하면
-        # 내부 구현이 드러나므로, 상태 코드만 로그에 남긴다.
-        print("[ai] {} HTTPError {}".format(active_provider_name(), error.code))
+        # 상태 코드만으론 원인을 알 수 없다 (키 오류인지 모델명 오류인지 구분 안 됨).
+        # 응답 본문에는 provider 가 알려준 정확한 사유가 들어 있으므로 로그에 남긴다.
+        # 단, 본문에 키가 되비쳐 나올 수 있어 마스킹한 뒤에 남긴다.
+        print("[ai] {} HTTPError {} {}".format(
+            active_provider_name(),
+            error.code,
+            _read_error_body(error, key),
+        ))
         return None
     except urllib.error.URLError as error:
         print("[ai] URLError {}".format(getattr(error, "reason", error)))
@@ -252,6 +257,41 @@ def _post_json(url, body, headers):
     )
     with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def _read_error_body(error, key, limit=300):
+    """에러 응답 본문에서 사람이 읽을 수 있는 사유만 뽑아낸다.
+
+    provider 를 바꿀 때 실제로 자주 나는 원인들:
+      - 400 INVALID_ARGUMENT : 모델명이 틀렸거나 지원하지 않는 파라미터를 보냄
+      - 401 UNAUTHENTICATED : 키가 잘렸거나 공백이 섞였거나 폐기됨
+      - 403 PERMISSION_DENIED: API가 꺼져 있거나 할당량 초과
+      - 429 RESOURCE_EXHAUSTED: 요청이 너무 빠름
+    키는 로그에 새지 않도록 반드시 치환한다.
+    """
+    try:
+        raw = error.read().decode("utf-8", "replace")
+    except Exception:  # noqa: BLE001 - 본문을 못 읽어도 로깅은 계속돼야 한다
+        return "(본문 읽기 실패)"
+
+    detail = ""
+    try:
+        payload = json.loads(raw)
+        # Gemini: {"error": {"message": "...", "status": "..."}}
+        # OpenAI: {"error": {"message": "..."}} 또는 {"message": "..."}
+        node = payload.get("error", payload)
+        if isinstance(node, dict):
+            detail = node.get("message", "")
+            status = node.get("status", "")
+            if status:
+                detail = "{} / {}".format(status, detail)
+        else:
+            detail = str(node)
+    except (json.JSONDecodeError, AttributeError):
+        detail = raw
+
+    detail = " ".join(str(detail).split())[:limit]
+    return detail.replace(key, "***") if key else detail
 
 
 def _parse_ai_json(content):
