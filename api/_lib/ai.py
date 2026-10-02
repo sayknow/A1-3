@@ -112,13 +112,15 @@ def build_prompt(profile, candidates):
             if job.get("salary_max") else "정보없음"
 
         lines.append(
-            "[{index}] 제목: {title}\n"
+            "[{index}] id: {job_id}\n"
+            "    제목: {title}\n"
             "    회사: {company} ({source})\n"
             "    지역: {location} | 근무형태: {job_type} | 금여: {salary}\n"
             "    태그: {tags}\n"
             "    설명: {description}\n"
             "    코드 기준 사전 점수: {score}점 / 근거: {reasons}\n".format(
                 index=index,
+                job_id=job["id"],
                 title=job["title"],
                 company=job["company"],
                 source=job["source"],
@@ -148,7 +150,8 @@ def build_prompt(profile, candidates):
 2. 각 공고마다 match_score(0~100), reasons(배열, 3개 이내), concern(부족한 점 한 줄 또는 빈 문자열), action(구직자가 다음에 할 행동 한 줄) 을 넣는다.
 3. reasons 는 반드시 해당 공고의 제목/태그/설명에 실제로 있는 내용만 근거로 삼아라. 없는 정보를 지어내지 마라.
 4. JSON 형태 예시: [{{"id": "remoteok:123", "match_score": 85, "reasons": ["이유1", "이유2", "이유3"], "concern": "없음", "action": "행동"}}]
-   - id 값은 반드시 후보 공고에 적힌 id 를 그대로 복사하라.
+   - id 값은 반드시 각 후보의 '[n] id:' 에 적힌 값을 한 글자도 바꾸지 말고 그대로 복사하라.
+     (순번 n 을 대신 넣거나 공고 제목을 넣으면 매칭이 실패해 전부 무시된다)
 5. 순위는 코드 사전 점수가 높은 순서를 따르되, 구직자 조건과의 실질적 부합도로 소폭 조정할 수 있다.
 6. 후보 개수만큼만 출력하라.
 """.format(
@@ -203,7 +206,7 @@ def recommend(profile, candidates):
         print("[ai] unexpected error {}".format(error))
         return None
 
-    return _parse_ai_json(text)
+    return _parse_ai_json(text, [item["job"]["id"] for item in candidates])
 
 
 # ---------------------------------------------------------------------------
@@ -323,11 +326,14 @@ def _read_error_body(error, key, limit=300):
     return detail.replace(key, "***") if key else detail
 
 
-def _parse_ai_json(content):
+def _parse_ai_json(content, expected_ids=None):
     """AI가 준 텍스트에서 JSON 배열을 안전하게 뽑아낸다.
 
     모델이 종종 마크다운 코드블록(```json ... ```)으로 감싸거나
     앞뒤에 잡담을 붙인다. 그래서 가장 먼저 '[' 와 마지막 ']' 사이만 잘라낸다.
+
+    expected_ids 를 주면 id 를 정확히 복사하지 못한 경우를 위한 안전망도 작동한다.
+    (후보 순서를 지켜 출력하라고 지시했으므로, 개수까지 같으면 순번으로 대응시킨다)
     """
     if not content:
         return None
@@ -352,5 +358,19 @@ def _parse_ai_json(content):
     result = {}
     for item in parsed:
         if isinstance(item, dict) and item.get("id"):
-            result[item["id"]] = item
+            result[str(item["id"])] = item
+
+    if expected_ids and len(parsed) == len(expected_ids):
+        for item, expected_id in zip(parsed, expected_ids):
+            if isinstance(item, dict):
+                result.setdefault(expected_id, item)
+
+    if expected_ids:
+        hit = sum(1 for expected_id in expected_ids if expected_id in result)
+        if hit == 0:
+            print("[ai] no id matched. returned ids={}".format(
+                sorted(result.keys())[:5]))
+        else:
+            print("[ai] matched {}/{}".format(hit, len(expected_ids)))
+
     return result or None
