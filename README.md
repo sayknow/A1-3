@@ -314,13 +314,26 @@ AI 맞춤 추천을 반환합니다.
 | 요청 | 응답 |
 | --- | --- |
 | `GET /api/jobs?limit=100` | 200 · 전체 135건 (Arbeitnow 60 / RemoteOK 59 / Remotive 16) |
-| `POST /api/recommend` (정상 입력) | 200 · 후보 8건 축소 후 top_n 건 선별 |
+| `POST /api/recommend` (정상 입력) | 200 · 후보 8건 축소 후 top_n 건 선별 · AI 연동 시 `ai_status: "ok"`, `ai_used: true` |
 | `GET /api/jobs?limit=abc` | 400 |
 | `GET /api/jobs?limit=9999` | 400 |
 | `GET /api/recommend` | 405 |
 | `POST /api/recommend` (빈 본문) | 400 |
 | `POST /api/recommend` (깨진 JSON) | 400 |
 | `GET /api/nope` | 404 |
+
+### AI 경로 3가지 상태 모두 실측
+
+`ai_status` 필드로 사용자에게 어떤 경로로 응답했는지 구분해 알려 줍니다.
+
+| 상태 | 조건 | 실제 확인 내용 |
+| --- | --- | --- |
+| `ok` | 정상 | AI 가 코드 점수(70·59·49)를 재랭킹해 75·58·52로 조정, 항목별 `ai_used: true`, 근거·아쉬운 점·제안 모두 채워짐. 화면 배지 "AI 분석 적용됨" |
+| `failed` | 키가 있으나 호출 실패 | `503 UNAVAILABLE (high demand)` · `400` 때도 로그에 provider 가 알려준 사유를 남김(키 마스킹). **결과는 코드 점수로 정상 반환** (HTTP 200) |
+| `disabled` | 키 없음 | `ai_used: false`, 근거는 키워드 사전 매칭, `concern`/`action` 공백. 화면 배지 "AI 미연동 상태" |
+
+> `failed` 로 내려가는 순간에도 서비스는 죽지 않고 폴백 결과로 응답합니다.
+> 일시적 과부하(429·5xx)에는 짧은 재시도(2회)를 거쳐 다시 AI 경로를 시도합니다.
 
 > AI 키 없이 배포된 상태이므로 `ai_status: "disabled"` 로 응답하며,
 > 화면에는 "AI 미연동 상태" 배지와 함께 코드 점수 기반 결과가 정상 표시됩니다.
@@ -336,7 +349,7 @@ AI 맞춤 추천을 반환합니다.
 | 예시 파일 | `.env.example` 은 값 없이 설명만 포함 (커밋 대상) |
 | XSS | 외부 API 데이터를 `escapeHtml()` 로 이스케이프 후 DOM 삽입 |
 | 경로 탈출 방지 | 개발 서버가 `..` 경로 차단 |
-| 내부 정보 노출 | AI 오류는 상태 코드만 서버 로그에, 사용자에게는 일반 메시지 |
+| 내부 정보 노출 | AI 오류는 서버 로그에만 남기고(키 값은 마스킹), 사용자에게는 일반 메시지 |
 
 ---
 
