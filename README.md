@@ -6,7 +6,7 @@
 
 순수 HTML / CSS / JavaScript + Vercel Serverless Functions (Python) 로 만든 구직 추천 웹 서비스
 
-[데모 보기](https://jobfit-seven.vercel.app) · [기획서](docs/서비스기획서.md) · [저장소](https://github.com/sayknow/A1-3)
+[데모 보기](https://jobfit-seven.vercel.app) · [기획서](docs/서비스기획서.md) · [과제 목표 회고](docs/과제목표_설명.md) · [저장소](https://github.com/sayknow/A1-3)
 
 > **실제 배포 주소: https://jobfit-seven.vercel.app**
 > (`jobfit.vercel.app` 은 이미 다른 서비스가 선점한 도메인이라 Vercel 이
@@ -107,6 +107,7 @@
 │
 ├── docs/
 │   ├── 서비스기획서.md      # 서비스 기획서 (제출 항목)
+│   ├── 과제목표_설명.md     # 과제 목표 6가지 회고 (실제 코드·경험 근거)
 │   └── screenshots/        # 증빙용 스크린샷 9장
 │
 ├── scripts/
