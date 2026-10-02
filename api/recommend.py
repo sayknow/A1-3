@@ -13,11 +13,11 @@ POST /api/recommend — AI 맞춤 추천 엔드포인트.
     {"role": "백엔드", "skills": "python, aws, docker", "level": "mid", "min_salary": 50000, "top_n": 5}
 """
 
-import base64
 import json
 import os
 import sys
 import time
+from http.server import BaseHTTPRequestHandler
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
@@ -32,7 +32,11 @@ AI_CANDIDATE_LIMIT = 8
 MAX_TOP_N = 10
 
 
-def handler(request):
+def _run(request):
+    """요청을 받아 추천 결과를 JSON 으로 돌려주는 실제 로직.
+
+    Vercel 진입점과 분리해 두어 로컬 개발 서버에서 그대로 재사용한다.
+    """
     started = time.time()
 
     # ------------------------------------------------------------------
@@ -183,6 +187,62 @@ def _json(payload, status):
             "Content-Type": "application/json; charset=utf-8",
             "Cache-Control": "no-store",
         },
-        "body": base64.b64encode(body).decode("ascii"),
-        "encoding": "base64",
+        "body": body.decode("utf-8"),
     }
+
+
+# ==========================================================================
+# Vercel 진입점 (api/recommend.py)
+# handler 는 BaseHTTPRequestHandler 서브클래스여야 한다.
+# ==========================================================================
+
+
+class _Request:
+    """BaseHTTPRequestHandler 를 _run() 이 기대하는 형태로 바꿔주는 어댑터."""
+
+    def __init__(self, raw):
+        from urllib.parse import parse_qs, urlparse
+
+        parsed = urlparse(raw.path)
+        self.args = {k: v[0] for k, v in parse_qs(parsed.query).items()}
+
+        length = int(raw.headers.get("Content-Length", 0) or 0)
+        self.body = raw.rfile.read(length).decode("utf-8") if length else "{}"
+        self.method = raw.command
+
+
+class handler(BaseHTTPRequestHandler):  # noqa: N801 (Vercel 이 요구하는 이름)
+    """POST /api/recommend — AI 맞춤 추천."""
+
+    protocol_version = "HTTP/1.1"
+
+    def do_POST(self):  # noqa: N802 (BaseHTTPRequestHandler 규약)
+        try:
+            result = _run(_Request(self))
+        except Exception as error:  # 마지막 방어선
+            print("[api/recommend] fatal {}".format(error))
+            result = _json(
+                {"error": "서버에 문제가 발생했습니다. 잠시 후 다시 시도해 주세요."},
+                500,
+            )
+
+        body = result["body"].encode("utf-8")
+        self.send_response(result["statusCode"])
+        for key, value in result["headers"].items():
+            self.send_header(key, value)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):  # noqa: N802
+        """GET 요청에는 405 를 돌려준다 (POST 전용 엔드포인트임을 알림)."""
+        result = _json({"error": "POST 방식만 지원합니다."}, 405)
+        body = result["body"].encode("utf-8")
+        self.send_response(405)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format, *args):
+        print("[api/recommend] " + format % args)

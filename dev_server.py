@@ -3,8 +3,11 @@
 로컬 개발용 서버 (Vercel 계정 없이 테스트하기 위함).
 
 Vercel 이 배포 환경에서 어떻게 동작하는지를 로컬에서 재현한다.
-    - 정적 파일(html/css/js) 서빙
+    - public/ 아래 정적 파일(html/css/js) 서빙
     - /api/jobs, /api/recommend 엔드포인트 실행
+
+엔드포인트의 실제 로직은 api/ 의 _run() 함수를 직접 호출한다.
+(배포에서는 Vercel 이 같은 로직을 BaseHTTPRequestHandler 로 감싸 실행한다)
 
 실행:
     python3 dev_server.py
@@ -26,8 +29,8 @@ sys.path.insert(0, os.path.join(ROOT, "api"))
 # 정적 파일은 public/ 아래에 있다. (Vercel 은 이 폴더를 정적 루트로 삼는다)
 PUBLIC_ROOT = os.path.join(ROOT, "public")
 
-from api.jobs import handler as jobs_handler      # noqa: E402
-from api.recommend import handler as recommend_handler  # noqa: E402
+from api.jobs import _run as jobs_run      # noqa: E402
+from api.recommend import _run as recommend_run  # noqa: E402
 
 # 포트 번호. 환경변수 이름으로 PORT 를 쓰면 호스트 환경의 PORT 와 충돌할 수 있어
 # JOBFIT_PORT 라는 전용 이름을 사용한다.
@@ -49,14 +52,9 @@ class Handler(BaseHTTPRequestHandler):
     """요청을 받아 정적 파일 또는 API 함수로 라우팅한다."""
 
     def _send_json_from_handler(self, result):
-        """Vercel 함수의 반환 형태({statusCode, body, encoding})를 실제 HTTP 응답으로 바꾼다."""
-        import base64
-
+        """엔드포인트가 돌려준 {statusCode, headers, body} 를 실제 HTTP 응답으로 바꾼다."""
         status = result.get("statusCode", 200)
-        if result.get("encoding") == "base64":
-            payload = base64.b64decode(result["body"])
-        else:
-            payload = result["body"].encode("utf-8")
+        payload = result["body"].encode("utf-8")
 
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -69,9 +67,9 @@ class Handler(BaseHTTPRequestHandler):
         request = _FakeRequest(path, query, body)
 
         if path == "/api/jobs":
-            result = jobs_handler(request)
+            result = jobs_run(request)
         elif path == "/api/recommend":
-            result = recommend_handler(request)
+            result = recommend_run(request)
         else:
             self._error(404, "없는 API 경로입니다: " + path)
             return

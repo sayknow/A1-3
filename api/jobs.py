@@ -16,6 +16,7 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler
 
 # Vercel 이 실행 디렉터리를 다르게 잡는 경우가 있어, 프로젝트 루트를
 # sys.path 에 직접 넣어 `from _lib...` 임포트가 항상 되게 한다.
@@ -31,8 +32,13 @@ def _now_iso():
     return datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def handler(request):
-    """Vercel Serverless Function 진입점."""
+def _run(request):
+    """요청을 받아 JSON 응답을 돌려주는 실제 로직.
+
+    Vercel 이 요구하는 진입점(_http.Handler 클래스)과 분리해 두었다.
+    덕분에 이 로직은 로컬 개발 서버에서 request 객체만 만들어 주면
+    그대로 재사용할 수 있다.
+    """
     started = time.time()
 
     # --- 입력 검증 (실패 처리 1: 잘못된 요청) ---
@@ -89,9 +95,7 @@ def handler(request):
 
 
 def _json(payload, status):
-    """JSON 응답을 만든다. Vercel 의 Node 런타임과 파이썬 런타임 모두에 맞춘 형태."""
-    import base64
-
+    """JSON 응답을 만든다. (로컬 개발 서버에서 재사용)"""
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     return {
         "statusCode": status,
@@ -99,6 +103,58 @@ def _json(payload, status):
             "Content-Type": "application/json; charset=utf-8",
             "Cache-Control": "no-store",
         },
-        "body": base64.b64encode(body).decode("ascii"),
-        "encoding": "base64",
+        "body": body.decode("utf-8"),
     }
+
+
+# ==========================================================================
+# Vercel 진입점
+#
+# Vercel 의 파이썬 런타임은 api/ 아래의 .py 파일마다 함수를 만들되,
+# 그 파일 안에 아래 이름 중 하나가 반드시 있어야 한다.
+#     app / application / handler(BaseHTTPRequestHandler 서브클래스)
+# 이 중 handler 서브클래스 방식을 쓴다.
+#
+# 주의: 여기서 예외가 밖으로 나가면 Vercel 이 500 을 뱉는다.
+# 그래서 어떤 경우에도 JSON 응답을 만들어 내려간다. (과제: 실패 처리)
+# ==========================================================================
+
+
+class _Request:
+    """BaseHTTPRequestHandler 를 _run() 이 기대하는 형태로 바꿔주는 어댑터."""
+
+    def __init__(self, raw):
+        from urllib.parse import parse_qs, urlparse
+
+        parsed = urlparse(raw.path)
+        self.args = {k: v[0] for k, v in parse_qs(parsed.query).items()}
+        self.body = None
+        self.method = raw.command
+
+
+class handler(BaseHTTPRequestHandler):  # noqa: N801 (Vercel 이 요구하는 이름)
+    """GET /api/jobs — 공고 목록."""
+
+    protocol_version = "HTTP/1.1"
+
+    def do_GET(self):  # noqa: N802 (BaseHTTPRequestHandler 규약)
+        try:
+            result = _run(_Request(self))
+        except Exception as error:  # 마지막 방어선: 서버가 죽지 않게
+            print("[api/jobs] fatal {}".format(error))
+            result = _json(
+                {"error": "서버에 문제가 발생했습니다. 잠시 후 다시 시도해 주세요."},
+                500,
+            )
+
+        body = result["body"].encode("utf-8")
+        self.send_response(result["statusCode"])
+        for key, value in result["headers"].items():
+            self.send_header(key, value)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format, *args):
+        """접근 로그를 Vercel 로그로 남긴다."""
+        print("[api/jobs] " + format % args)
